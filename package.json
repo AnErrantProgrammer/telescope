@@ -1,0 +1,73 @@
+{
+  "name": "telescope",
+  "displayName": "Telescope",
+  "description": "",
+  "version": "0.0.1",
+  "publisher": "anerrantprogrammer",
+  "engines": {
+    "vscode": "^1.18.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "*"
+  ],
+  "main": "./extension",
+  "contributes": {
+    "commands": [{
+      "command": "telescope.createSession",
+      "title": "🔭 Create Session"
+    }, {
+      "command": "telescope.joinSession",
+      "title": "🔭 Join Session"
+    }, {
+      "command": "telescope.addDocument",
+      "title": "🔭 Add Document to Session"
+    }, {
+      "command": "telescope.setName",
+      "title": "🔭 Set User Name"
+    }, {
+      "command": "telescope.changeHost",
+      "title": "🔭 Change Host"
+    }, {
+      "command": "telescope.connectToHost",
+      "title": "🔭 Connect To Host"
+    }, {
+      "command": "telescope.disconnectFromHost",
+      "title": "🔭 Disconnect From Host"
+    }],
+    "configuration": {
+      "type": "object",
+      "title": "Telescope Settings",
+      "properties": {
+        "telescope.username": {
+          "type": "string",
+          "default": "HamCutter",
+          "description": "User Display Name"
+        },
+        "telescope.host": {
+          "type": "string",
+          "default": "http://localhost:3000",
+          "description": "CodePulse Server URL"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "postinstall": "node ./node_modules/vscode/bin/install",
+    "test": "node ./node_modules/vscode/bin/test"
+  },
+  "devDependencies": {
+    "typescript": "^2.6.1",
+    "vscode": "^1.1.6",
+    "eslint": "^4.6.1",
+    "@types/node": "^7.0.43",
+    "@types/mocha": "^2.2.42"
+  },
+  "dependencies": {
+    "diff": "^3.4.0",
+    "socket.io-client": "^2.0.4",
+    "socketio": "^1.0.0"
+  }
+}
