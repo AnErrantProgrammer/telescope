@@ -10,7 +10,7 @@ To use Telescope you must have access to a [https://github.com/AnErrantProgramme
 
 To deploy a Telescope server directly to Heroku:
 
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/AnErrantProgrammer/telescope-server)
+[![Deploy](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy?template=https://github.com/AnErrantProgrammer/telescope-server)
 
 ## Extension Settings
 
