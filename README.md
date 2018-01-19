@@ -8,6 +8,10 @@ Telescope allows multiple people to collaborate on a document in real time, sync
 
 To use Telescope you must have access to a [https://github.com/AnErrantProgrammer/telescope-server](Telescope Server)
 
+To deploy a Telescope server directly to Heroku:
+
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/AnErrantProgrammer/telescope-server)
+
 ## Extension Settings
 
 * `telescope.name`: The display name to use when connecting
