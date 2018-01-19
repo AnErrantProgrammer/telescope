@@ -277,16 +277,16 @@ var SocketSyncController = (function () {
     }
 
     SocketSyncController.prototype.setName = function () {
-
+        var _this = this;
         vscode.window.showInputBox({
             prompt: 'Please enter a user name.'
         }).then(function (name) {
-            this.name = name;
+            _this.name = name;
 
             config.update('username', name);
-            if (this.isInSession()) {
+            if (_this.isInSession()) {
                 socket.emit(EVENTS.SET_NAME, {
-                    name: this.name
+                    name: _this.name
                 });
             }
         });
