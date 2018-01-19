@@ -19,3 +19,9 @@ To use Telescope you must have access to a [https://github.com/AnErrantProgramme
 2. Join or create a session
 3. Add a document to the session
 4. Collaborate with another user and see changes in real time
+
+## Social
+
+[Twitter](https://twitter.com/sn_aug)
+[Blog](http://anerrantprogrammer.com)
+[Github](https://github.com/salcosta)
