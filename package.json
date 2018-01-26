@@ -28,11 +28,20 @@
       "command": "telescope.joinSession",
       "title": "🔭 Join Session"
     }, {
+      "command": "telescope.leaveSession",
+      "title": "🔭 Leave Session"
+    }, {
+      "command": "telescope.showSession",
+      "title": "🔭 Show Session"
+    }, {
+      "command": "telescope.linkSession",
+      "title": "🔭 Show Session Link"
+    }, {
       "command": "telescope.addDocument",
       "title": "🔭 Add Document to Session"
     }, {
-      "command": "telescope.setName",
-      "title": "🔭 Set User Name"
+      "command": "telescope.changeName",
+      "title": "🔭 Change User Name"
     }, {
       "command": "telescope.changeHost",
       "title": "🔭 Change Host"
@@ -43,6 +52,12 @@
       "command": "telescope.disconnectFromHost",
       "title": "🔭 Disconnect From Host"
     }],
+    "menus": {
+        "editor/context": [{
+            "command": "telescope.addDocument",
+            "group": "1_modification"
+        }]
+    },
     "configuration": {
       "type": "object",
       "title": "Telescope Settings",

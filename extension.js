@@ -12,6 +12,7 @@ var SocketSyncController = (function () {
     var EVENTS = {
         CONNECTION: 'connection',
         ADD_DOC: 'add doc',
+        RE_ADD_DOC: 're add doc',
         CHANGE_DOC: 'change doc',
         CHANGE_SELECTION: 'change selection',
         CREATE_SESSION: 'create session',
@@ -22,12 +23,18 @@ var SocketSyncController = (function () {
         SET_SESSION: 'set session',
         REJECT_JOIN: 'reject join',
         SET_DOC_ID: 'set doc id',
-        USER_JOINED: 'joined'
+        USER_LEFT: 'left',
+        USER_JOINED: 'joined',
+        LEAVE_SESSION: 'leave session'
     };
 
     function SocketSyncController() {
+        var _this = this;
         var subscriptions = [];
         this.files = {};
+        this.editQueue = [];
+        this.fileIds = {};
+        this.changeInProgress = false;
         this.session = '';
         this.tempDir = '';
         this.socketEventsInitialized = false;
@@ -36,17 +43,23 @@ var SocketSyncController = (function () {
         this.statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right);
         this.statusBar.command = 'telescope.connectToHost';
         this.statusBar.text = '🔭 Telescope Initializing...';
+        this.processEditQueueInterval = setInterval(function () {
+            _this.processEditQueue();
+        }, 10);
 
         this.statusBar.show();
 
         var subscriptions = [
             vscode.commands.registerCommand('telescope.createSession', this.createSession, this),
             vscode.commands.registerCommand('telescope.joinSession', this.joinSession, this),
+            vscode.commands.registerCommand('telescope.leaveSession', this.leaveSession, this),
             vscode.commands.registerCommand('telescope.addDocument', this.addDoc, this),
-            vscode.commands.registerCommand('telescope.setName', this.setName, this),
+            vscode.commands.registerCommand('telescope.changeName', this.changeName, this),
             vscode.commands.registerCommand('telescope.connectToHost', this.connectToHost, this),
             vscode.commands.registerCommand('telescope.disconnectFromHost', this.disconnectFromHost, this),
-            vscode.commands.registerCommand('telescope.changeHost', this.changeHost, this)
+            vscode.commands.registerCommand('telescope.changeHost', this.changeHost, this),
+            vscode.commands.registerCommand('telescope.showSession', this.showSession, this),
+            vscode.commands.registerCommand('telescope.linkSession', this.linkSession, this)
         ];
 
         vscode.workspace.onDidChangeTextDocument(this._onDocumentChanged, this, subscriptions);
@@ -77,8 +90,8 @@ var SocketSyncController = (function () {
         this.statusBar.text = '🔭 Telescope Connecting...';
 
         socket = io(host);
-        
-        socket.on('connect', function(){
+
+        socket.on('connect', function () {
             if (!_this.socketEventsInitialized) {
                 _this.initializeSocketEvents();
             }
@@ -88,7 +101,7 @@ var SocketSyncController = (function () {
             _this.statusBar.text = '🔭 Telescope Active';
         });
 
-        socket.on('connect_error', function(){
+        socket.on('connect_error', function () {
             _this.statusBar.text = '🔭 Telescope Inactive';
         });
 
@@ -113,6 +126,10 @@ var SocketSyncController = (function () {
             _this._onSetDocId(data);
         });
 
+        socket.on(EVENTS.RE_ADD_DOC, function (data) {
+            _this._onReAddDoc(data);
+        });
+
         socket.on(EVENTS.CHANGE_SELECTION, function (data) {
             _this._onChangeSelection(data);
         });
@@ -120,6 +137,11 @@ var SocketSyncController = (function () {
         socket.on(EVENTS.USER_JOINED, function (data) {
             _this._onUserJoined(data);
         });
+
+        socket.on(EVENTS.USER_LEFT, function (data) {
+            _this._onUserLeft(data);
+        });
+
     }
 
     /**
@@ -155,7 +177,6 @@ var SocketSyncController = (function () {
      */
     SocketSyncController.prototype._onChangeSelection = function (data) {
         if (this.isInSession()) {
-
             for (var i = 0; i < vscode.window.visibleTextEditors.length; i++) {
                 var editor = vscode.window.visibleTextEditors[i];
 
@@ -185,7 +206,15 @@ var SocketSyncController = (function () {
     }
 
     SocketSyncController.prototype._onUserJoined = function (data) {
-        vscode.window.showInformationMessage(data.name + " joined session.");
+        if (data.name != '') {
+            vscode.window.showInformationMessage(data.name + " joined session.");
+        }
+    }
+
+    SocketSyncController.prototype._onUserLeft = function (data) {
+        if (data.name != '') {
+            vscode.window.showInformationMessage(data.name + " left session.");
+        }
     }
 
     SocketSyncController.prototype._onSetDocId = function (data) {
@@ -193,6 +222,8 @@ var SocketSyncController = (function () {
     }
 
     SocketSyncController.prototype.getDocURIById = function (id) {
+        if (typeof this.fileIds[id] !== 'undefined') return this.fileIds[id];
+
         var fileName = false;
 
         for (var file in this.files) {
@@ -205,6 +236,7 @@ var SocketSyncController = (function () {
         });
 
         if (doc) {
+            this.fileIds[id] = doc.uri;
             return doc.uri;
         } else {
             return false;
@@ -219,6 +251,7 @@ var SocketSyncController = (function () {
     SocketSyncController.prototype._onAddDoc = function (data) {
         var _this = this;
         var fileName = this.tempDir + path.sep + data.fileName;
+
         fs.writeFileSync(fileName, data.text);
 
         vscode.workspace.openTextDocument(fileName).then(function (document) {
@@ -228,7 +261,6 @@ var SocketSyncController = (function () {
     }
 
     SocketSyncController.prototype._onChangeDoc = function (data) {
-        this.belayChange = true;
         var changeEvent = data.changeEvent[0];
         var start = new vscode.Position(changeEvent.range[0].line, changeEvent.range[0].character);
         var end = new vscode.Position(changeEvent.range[1].line, changeEvent.range[1].character);
@@ -239,7 +271,24 @@ var SocketSyncController = (function () {
         if (doc) {
             var wsEdit = new vscode.WorkspaceEdit();
             wsEdit.set(doc, [edit]);
-            vscode.workspace.applyEdit(wsEdit);
+            this.editQueue.push(wsEdit)
+        }
+
+    }
+
+    SocketSyncController.prototype.processEditQueue = function (data) {
+        var _this = this;
+        if (this.editQueue.length > 0) {
+            if (!this.changeInProgress) {
+                _this.changeInProgress = true;
+                _this.belayChange = true;
+                vscode.workspace.applyEdit(this.editQueue.shift()).then(function () {
+                    _this.changeInProgress = false;
+                    _this.belayChange = false;
+                });
+            } else {
+                console.log('...');
+            }
         }
     }
 
@@ -247,7 +296,7 @@ var SocketSyncController = (function () {
      * Commands
      */
     SocketSyncController.prototype.createSession = function () {
-        if (this.isInSession()) {
+        if (socket.connected) {
             this.tempDir = tmp.dirSync().name;
             socket.emit(EVENTS.CREATE_SESSION);
         }
@@ -257,10 +306,30 @@ var SocketSyncController = (function () {
         if (this.isInSession()) {
             var doc = vscode.window.activeTextEditor.document;
             if (!doc.isUntitled) {
-                socket.emit(EVENTS.ADD_DOC, {
-                    fileName: doc.fileName,
-                    text: doc.getText()
-                });
+                if (typeof this.files[doc.fileName] === 'undefined') {
+                    socket.emit(EVENTS.ADD_DOC, {
+                        fileName: doc.fileName,
+                        text: doc.getText()
+                    });
+                } else {
+                    socket.emit(EVENTS.RE_ADD_DOC, {
+                        fileId: this.files[doc.fileName],
+                        fileName: doc.fileName,
+                        text: doc.getText()
+                    });
+                }
+            }
+        }
+    }
+
+    SocketSyncController.prototype._onReAddDoc = function (data) {
+        if (this.isInSession()) {
+            for (var i = 0; i < vscode.window.visibleTextEditors.length; i++) {
+                var editor = vscode.window.visibleTextEditors[i];
+
+                if (this.files[editor.document.fileName] == data.fileId) {
+                   debugger; 
+                }
             }
         }
     }
@@ -276,7 +345,7 @@ var SocketSyncController = (function () {
         });
     }
 
-    SocketSyncController.prototype.setName = function () {
+    SocketSyncController.prototype.changeName = function () {
         var _this = this;
         vscode.window.showInputBox({
             prompt: 'Please enter a user name.'
@@ -301,7 +370,7 @@ var SocketSyncController = (function () {
                 prompt: 'Please enter your Session ID.'
             }).then(function (sessionId) {
                 _this.session = sessionId;
-                socket.emit('join session', {
+                socket.emit(EVENTS.JOIN_SESSION, {
                     session: sessionId
                 })
             });
@@ -312,8 +381,17 @@ var SocketSyncController = (function () {
         if (this.isInSession()) {
             this.files = [];
             this.session = [];
-            socket.emit('leave session');
+            socket.emit(EVENTS.LEAVE_SESSION);
         }
+    }
+
+    SocketSyncController.prototype.showSession = function (data) {
+        vscode.window.showInformationMessage(this.session);
+    }
+
+    SocketSyncController.prototype.linkSession = function (data) {
+        var link = host + '?session=' + this.session;
+        vscode.window.showInformationMessage(link);
     }
 
     /**
