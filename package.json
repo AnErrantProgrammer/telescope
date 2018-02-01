@@ -1,9 +1,9 @@
 {
   "name": "telescope",
-  "author": "Sal Costa <costas0811@hotmail.com> (http://anerrantprogrammer.com",
+  "author": "Sal Costa <costas0811@hotmail.com> (http://anerrantprogrammer.com)",
   "displayName": "Telescope",
   "description": "",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "publisher": "anerrantprogrammer",
   "repository": {
@@ -87,7 +87,6 @@
     "@types/mocha": "^2.2.42"
   },
   "dependencies": {
-    "diff": "^3.4.0",
     "socket.io-client": "^2.0.4",
     "socketio": "^1.0.0",
     "tmp":"^0.0.33"

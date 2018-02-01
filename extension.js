@@ -250,6 +250,7 @@ var SocketSyncController = (function () {
 
     SocketSyncController.prototype._onAddDoc = function (data) {
         var _this = this;
+        data.fileName = data.fileName.replace(/[\\\/:]/img, "_");
         var fileName = this.tempDir + path.sep + data.fileName;
 
         fs.writeFileSync(fileName, data.text);
@@ -276,7 +277,7 @@ var SocketSyncController = (function () {
 
     }
 
-    SocketSyncController.prototype.processEditQueue = function (data) {
+    SocketSyncController.prototype.processEditQueue = function () {
         var _this = this;
         if (this.editQueue.length > 0) {
             if (!this.changeInProgress) {
@@ -385,11 +386,11 @@ var SocketSyncController = (function () {
         }
     }
 
-    SocketSyncController.prototype.showSession = function (data) {
+    SocketSyncController.prototype.showSession = function () {
         vscode.window.showInformationMessage(this.session);
     }
 
-    SocketSyncController.prototype.linkSession = function (data) {
+    SocketSyncController.prototype.linkSession = function () {
         var link = host + '?session=' + this.session;
         vscode.window.showInformationMessage(link);
     }
